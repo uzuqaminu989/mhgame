@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>City Bus Driver</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    user-select:none;
+    -webkit-user-select:none;
+}
+
+body{
+    background:#111;
+    font-family:Arial,sans-serif;
+    overflow:hidden;
+    touch-action:none;
+}
+
+#game{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    background:#69b34c;
+    overflow:hidden;
+}
+
+/* HUD */
+#hud{
+    position:absolute;
+    top:10px;
+    left:10px;
+    right:10px;
+    z-index:20;
+    display:flex;
+    justify-content:space-between;
+    gap:6px;
+}
+
+.box{
+    background:rgba(0,0,0,.72);
+    color:white;
+    padding:8px 12px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:bold;
+}
+
+/* Road */
+#road{
+    position:absolute;
+    width:min(430px,82vw);
+    height:100%;
+    left:50%;
+    transform:translateX(-50%);
+    background:#333;
+    border-left:8px solid #ddd;
+    border-right:8px solid #ddd;
+}
+
+/* Road lines */
+.line{
+    position:absolute;
+    width:8px;
+    height:80px;
+    background:white;
+    opacity:.9;
+}
+
+#line1{left:33.33%;}
+#line2{left:66.66%;}
+
+/* Bus */
+#bus{
+    position:absolute;
+    width:65px;
+    height:115px;
+    left:50%;
+    bottom:120px;
+    transform:translateX(-50%);
+    background:#e91e63;
+    border-radius:12px 12px 8px 8px;
+    border:4px solid #222;
+    z-index:10;
+    box-shadow:0 5px 10px #111;
+}
+
+#bus .window{
+    position:absolute;
+    left:8px;
+    right:8px;
+    top:10px;
+    height:35px;
+    background:#75c9e8;
+    border:3px solid #222;
+    border-radius:5px;
+}
+
+#bus .window2{
+    position:absolute;
+    left:8px;
+    right:8px;
+    top:51px;
+    height:22px;
+    background:#75c9e8;
+    border:3px solid #222;
+}
+
+.wheel{
+    position:absolute;
+    width:10px;
+    height:27px;
+    background:#111;
+    border-radius:4px;
+    top:30px;
+}
+
+.w1{left:-8px;}
+.w2{right:-8px;}
+
+/* Traffic cars */
+.car{
+    position:absolute;
+    width:58px;
+    height:90px;
+    border-radius:10px;
+    border:3px solid #111;
+    z-index:7;
+}
+
+.car::before{
+    content:"";
+    position:absolute;
+    left:7px;
+    right:7px;
+    top:8px;
+    height:28px;
+    background:#8ed5e8;
+    border-radius:5px;
+    border:2px solid #222;
+}
+
+/* Coins */
+.coin{
+    position:absolute;
+    width:25px;
+    height:25px;
+    border-radius:50%;
+    background:#ffd600;
+    border:3px solid #f57f17;
+    z-index:8;
+    box-shadow:0 0 10px #ffd600;
+}
+
+/* Fuel */
+#fuelBar{
+    position:absolute;
+    top:55px;
+    left:10px;
+    width:150px;
+    height:14px;
+    background:#222;
+    border-radius:10px;
+    overflow:hidden;
+    z-index:20;
+}
+
+#fuel{
+    height:100%;
+    width:100%;
+    background:#00e676;
+}
+
+/* Start screen */
+#startScreen,
+#gameOver{
+    position:absolute;
+    inset:0;
+    z-index:100;
+    background:rgba(0,0,0,.85);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    color:white;
+    text-align:center;
+}
+
+#startScreen h1,
+#gameOver h1{
+    font-size:38px;
+    margin-bottom:15px;
+    color:#ffca28;
+}
+
+button{
+    border:0;
+    padding:14px 30px;
+    border-radius:12px;
+    background:#ff1744;
+    color:white;
+    font-size:18px;
+    font-weight:bold;
+    margin-top:15px;
+}
+
+/* Controls */
+#controls{
+    position:absolute;
+    bottom:20px;
+    left:0;
+    right:0;
+    z-index:30;
+    display:flex;
+    justify-content:space-between;
+    padding:0 25px;
+}
+
+.ctrl{
+    width:75px;
+    height:65px;
+    border-radius:18px;
+    background:rgba(0,0,0,.65);
+    color:white;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:32px;
+    border:2px solid #777;
+}
+
+#brake{
+    width:90px;
+    font-size:16px;
+}
+
+/* Desktop keyboard message */
+#keys{
+    position:absolute;
+    bottom:5px;
+    left:50%;
+    transform:translateX(-50%);
+    color:white;
+    font-size:12px;
+    z-index:25;
+    opacity:.7;
+}
+
+@media(max-width:500px){
+    #keys{
+        display:none;
+    }
+
+    #road{
+        width:86vw;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+    <div id="hud">
+        <div class="box">🏆 Score: <span id="score">0</span></div>
+        <div class="box">🪙 Coins: <span id="coins">0</span></div>
+        <div class="box">🚀 Speed: <span id="speed">0</span></div>
+    </div>
+
+    <div id="fuelBar">
+        <div id="fuel"></div>
+    </div>
+
+    <div id="road">
+
+        <div class="line" id="line1"></div>
+        <div class="line" id="line2"></div>
+
+        <div id="bus">
+            <div class="window"></div>
+            <div class="window2"></div>
+            <div class="wheel w1"></div>
+            <div class="wheel w2"></div>
+        </div>
+
+    </div>
+
+    <div id="controls">
+        <div class="ctrl" id="left">⬅️</div>
+        <div class="ctrl" id="brake">BRAKE</div>
+        <div class="ctrl" id="right">➡️</div>
+    </div>
+
+    <div id="keys">
+        Keyboard: ← → to drive | Space = Brake
+    </div>
+
+    <div id="startScreen">
+        <h1>🚌 CITY BUS</h1>
+        <p>Drive your bus and collect coins!</p>
+        <button id="startBtn">START GAME</button>
+    </div>
+
+    <div id="gameOver" style="display:none;">
+        <h1>GAME OVER</h1>
+        <p>Your Score: <span id="finalScore">0</span></p>
+        <button id="restartBtn">PLAY AGAIN</button>
+    </div>
+
+</div>
+
+<script>
+
+const game = document.getElementById("game");
+const road = document.getElementById("road");
+const bus = document.getElementById("bus");
+
+const scoreText = document.getElementById("score");
+const coinText = document.getElementById("coins");
+const speedText = document.getElementById("speed");
+const fuelBar = document.getElementById("fuel");
+
+const startScreen = document.getElementById("startScreen");
+const gameOverScreen = document.getElementById("gameOver");
+
+const finalScore = document.getElementById("finalScore");
+
+let playing = false;
+
+let score = 0;
+let coins = 0;
+let fuel = 100;
+
+let busX = 0;
+let speed = 5;
+
+let traffic = [];
+let coinObjects = [];
+
+let leftPressed = false;
+let rightPressed = false;
+let brakePressed = false;
+
+let spawnTimer = 0;
+let coinTimer = 0;
+let roadMove = 0;
+
+/* Start */
+document.getElementById("startBtn").onclick = startGame;
+document.getElementById("restartBtn").onclick = startGame;
+
+function startGame(){
+
+    score = 0;
+    coins = 0;
+    fuel = 100;
+    speed = 5;
+
+    scoreText.textContent = score;
+    coinText.textContent = coins;
+    speedText.textContent = speed;
+
+    traffic.forEach(x => x.remove());
+    coinObjects.forEach(x => x.remove());
+
+    traffic = [];
+    coinObjects = [];
+
+    busX = road.clientWidth / 2 - bus.offsetWidth / 2;
+
+    bus.style.left = busX + "px";
+
+    startScreen.style.display = "none";
+    gameOverScreen.style.display = "none";
+
+    playing = true;
+
+    requestAnimationFrame(gameLoop);
+}
+
+/* Keyboard */
+document.addEventListener("keydown", e => {
+
+    if(e.key === "ArrowLeft"){
+        leftPressed = true;
+    }
+
+    if(e.key === "ArrowRight"){
+        rightPressed = true;
+    }
+
+    if(e.code === "Space"){
+        brakePressed = true;
+    }
+});
+
+document.addEventListener("keyup", e => {
+
+    if(e.key === "ArrowLeft"){
+        leftPressed = false;
+    }
+
+    if(e.key === "ArrowRight"){
+        rightPressed = false;
+    }
+
+    if(e.code === "Space"){
+        brakePressed = false;
+    }
+});
+
+/* Touch controls */
+
+function holdButton(element, down, up){
+
+    element.addEventListener("touchstart", e => {
+        e.preventDefault();
+        down();
+    });
+
+    element.addEventListener("touchend", e => {
+        e.preventDefault();
+        up();
+    });
+
+    element.addEventListener("mousedown", down);
+    element.addEventListener("mouseup", up);
+    element.addEventListener("mouseleave", up);
+}
+
+holdButton(
+    document.getElementById("left"),
+    () => leftPressed = true,
+    () => leftPressed = false
+);
+
+holdButton(
+    document.getElementById("right"),
+    () => rightPressed = true,
+    () => rightPressed = false
+);
+
+holdButton(
+    document.getElementById("brake"),
+    () => brakePressed = true,
+    () => brakePressed = false
+);
+
+
+/* Create traffic */
+
+function createCar(){
+
+    const car = document.createElement("div");
+
+    car.className = "car";
+
+    const colors = [
+        "#2196f3",
+        "#ff5722",
+        "#4caf50",
+        "#9c27b0",
+        "#ffc107",
+        "#00bcd4"
+    ];
+
+    car.style.background =
+        colors[Math.floor(Math.random()*colors.length)];
+
+    const lane = Math.floor(Math.random()*3);
+
+    const laneWidth = road.clientWidth / 3;
+
+    const x =
+        lane * laneWidth +
+        laneWidth/2 -
+        29;
+
+    car.style.left = x + "px";
+    car.style.top = "-110px";
+
+    road.appendChild(car);
+
+    traffic.push(car);
+}
+
+
+/* Create coin */
+
+function createCoin(){
+
+    const coin = document.createElement("div");
+
+    coin.className = "coin";
+
+    const lane = Math.floor(Math.random()*3);
+
+    const laneWidth = road.clientWidth / 3;
+
+    const x =
+        lane * laneWidth +
+        laneWidth/2 -
+        12;
+
+    coin.style.left = x + "px";
+    coin.style.top = "-40px";
+
+    road.appendChild(coin);
+
+    coinObjects.push(coin);
+}
+
+
+/* Collision */
+
+function collision(a,b){
+
+    const ar = a.getBoundingClientRect();
+    const br = b.getBoundingClientRect();
+
+    return !(
+        ar.right < br.left ||
+        ar.left > br.right ||
+        ar.bottom < br.top ||
+        ar.top > br.bottom
+    );
+}
+
+
+/* Game Loop */
+
+function gameLoop(){
+
+    if(!playing) return;
+
+    /* Bus movement */
+
+    let moveSpeed = 6;
+
+    if(brakePressed){
+        moveSpeed = 2;
+    }
+
+    if(leftPressed){
+        busX -= moveSpeed;
+    }
+
+    if(rightPressed){
+        busX += moveSpeed;
+    }
+
+    const minX = 5;
+    const max
